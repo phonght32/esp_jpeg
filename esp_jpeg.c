@@ -119,5 +119,7 @@ esp_err_t esp_jpeg_set_file(esp_jpeg_handle_t handle, const char *file_path)
 		return ESP_ERR_NOT_SUPPORTED;
 	}
 
+	ESP_LOGI(TAG, "Set image %s", file_path);
+
 	return ESP_OK;
 }
