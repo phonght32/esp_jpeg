@@ -3,30 +3,48 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
+#include "freertos/task.h"
+#include "freertos/semphr.h"
+
+#include "esp_log.h"
 #include "esp_heap_caps.h"
 #include "esp_jpeg.h"
 
+#define mutex_lock(x)       while (xSemaphoreTake(x, portMAX_DELAY) != pdPASS);
+#define mutex_unlock(x)     xSemaphoreGive(x)
+#define mutex_create()      xSemaphoreCreateMutex()
+#define mutex_destroy(x)    vQueueDelete(x)
+
 #define TJPGD_WORKSPACE_SIZE 3100
 
-typedef struct {
-	uint8_t 	workspace[TJPGD_WORKSPACE_SIZE] __attribute__((aligned(4)));
-	const char 	*file_path;
-	uint64_t 	file_pos;
-	int16_t 	jpeg_x;
-	int16_t 	jpeg_y;
-	uint8_t 	jpeg_scale;
+#define ESPJPEG_CHECK(a, str, action) if(!(a)) {                             	\
+    ESP_LOGE(TAG, "%s:%d (%s):%s", __FILE__, __LINE__, __FUNCTION__, str);  \
+    action;                                                                 \
+}
+
+typedef struct esp_jpeg {
+	uint8_t 			workspace[TJPGD_WORKSPACE_SIZE] __attribute__((aligned(4)));
+	const char 			*file_path;
+	uint64_t 			file_pos;
+	int16_t 			jpeg_x;
+	int16_t 			jpeg_y;
+	uint8_t 			jpeg_scale;
+	uint8_t				*buffer;
+	SemaphoreHandle_t 	lock;
 } esp_jpeg_t;
 
 static esp_jpeg_t *g_jpegdec;
+static const char *TAG = "ESP_JPEG";
 
 uint16_t jd_input(JDEC* jdec, uint8_t* buf, uint16_t len)
 {
-	g_jpegdec->file_path = (const char*)"/spiffs/panda.jpg";
-
 	FILE *fp = NULL;
 	fp = fopen(g_jpegdec->file_path, "r");
 	if (fp == NULL) {
-		fprintf(stderr, "Error open file %s\n", g_jpegdec->file_path);
+		ESP_LOGE(TAG, "Error open file %s", g_jpegdec->file_path);
 		return 0;
 	}
 
@@ -36,7 +54,7 @@ uint16_t jd_input(JDEC* jdec, uint8_t* buf, uint16_t len)
 
 	if (sz <=0) {
 		fclose(fp);
-		fprintf(stderr, "Error no content size %ld\n", sz);
+		ESP_LOGE(TAG, "Error no content size %ld", sz);
 		return 0;
 	}
 
@@ -55,10 +73,31 @@ uint16_t jd_input(JDEC* jdec, uint8_t* buf, uint16_t len)
 	return len;
 }
 
-esp_err_t esp_jpeg_init(void)
+esp_jpeg_handle_t esp_jpeg_init(uint8_t *buffer)
 {
+	ESPJPEG_CHECK(buffer, "error buffer null", return NULL);
+
 	g_jpegdec = calloc(1, sizeof(esp_jpeg_t));
+	ESPJPEG_CHECK(g_jpegdec, "error handle null", return NULL);
+
 	g_jpegdec->file_path = calloc(29, sizeof(uint8_t));
+	g_jpegdec->file_pos = 0;
+	g_jpegdec->jpeg_x = 0;
+	g_jpegdec->jpeg_y = 0;
+	g_jpegdec->jpeg_scale = 0;
+	g_jpegdec->buffer = buffer;
+	g_jpegdec->lock = mutex_create();
+
+	return g_jpegdec;
+}
+
+esp_err_t esp_jpeg_set_file(esp_jpeg_handle_t handle, const char *file_path)
+{
+	ESPJPEG_CHECK(handle, "error handle null", return ESP_ERR_INVALID_ARG);
+
+	mutex_lock(handle->lock);
+	handle->file_path = file_path;
+	mutex_unlock(handle->lock);
 
 	return ESP_OK;
 }

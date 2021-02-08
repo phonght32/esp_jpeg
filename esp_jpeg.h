@@ -8,7 +8,10 @@ extern "C" {
 #include "esp_err.h"
 #include "tjpgd.h"
 
-esp_err_t esp_jpeg_init(void);
+typedef struct esp_jpeg *esp_jpeg_handle_t;
+
+esp_jpeg_handle_t esp_jpeg_init(uint8_t *buffer);
+esp_err_t esp_jpeg_set_file(esp_jpeg_handle_t handle, const char *file_path);
 esp_err_t esp_jpeg_get_size(const char *fp, uint16_t *w, uint16_t *h);
 
 
