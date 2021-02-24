@@ -101,7 +101,12 @@ esp_err_t esp_jpeg_set_file(esp_jpeg_handle_t handle, const char *file_path)
 	JDEC jdec;
 	JRESULT jresult;
 
-	handle->file_path = file_path;
+	if (handle->file_path) {
+		free(handle->file_path);
+		handle->file_path = NULL;
+	}
+
+	handle->file_path = strdup(file_path);
 	handle->file_pos = 0;
 
 	jresult = jd_prepare(&jdec, _jd_input, g_jpegdec->workspace, TJPGD_WORKSPACE_SIZE, 0);
