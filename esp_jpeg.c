@@ -1,11 +1,9 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 
 #include "esp_log.h"
 #include "esp_heap_caps.h"
+#include "tjpgd.h"
+
 #include "esp_jpeg.h"
 
 #define TJPGD_WORKSPACE_SIZE 3100
@@ -17,7 +15,7 @@
 
 typedef struct esp_jpeg {
 	uint8_t 			*workspace;
-	const char 			*file_path;
+	char 			*file_path;
 	uint64_t 			file_pos;
 	uint16_t 			width;
 	uint16_t 			height;

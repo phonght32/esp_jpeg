@@ -6,7 +6,6 @@ extern "C" {
 #endif
 
 #include "esp_err.h"
-#include "tjpgd.h"
 
 typedef struct esp_jpeg *esp_jpeg_handle_t;
 
