@@ -1,3 +1,33 @@
+/**
+ * @file esp_jpeg.c
+ *
+ * ESP-IDF's component takes a JPEG image and converts it to RGB888 data. This 
+ * component is based on the Tiny JPEG Decompessor, which has low memory 
+ * consumption and is highly optimized for small embedded systems.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2023 phonght32
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 #include <string.h>
 
 #include "esp_log.h"
@@ -6,25 +36,51 @@
 
 #include "esp_jpeg.h"
 
+/**
+ * @macro   Tiny JPEG Decompressor workspace.
+ */
 #define TJPGD_WORKSPACE_SIZE 3100
 
+/**
+ * @macro   ESP JPEG check.
+ */
 #define ESPJPEG_CHECK(a, str, action) if(!(a)) {                             	\
     ESP_LOGE(TAG, "%s:%d (%s):%s", __FILE__, __LINE__, __FUNCTION__, str);  \
     action;                                                                 \
 }
 
+/**
+ * @struct 	Structure stores the ESP JPEG information.
+ *
+ * @param 	workspace Tiny JPEG Decompressor workspace.
+ * @param 	file_path File path.
+ * @param 	file_pos Current file position referenced to.
+ * @param 	width Image width in pixel.
+ * @param 	height Image height in pixel.
+ * @param 	buffer Pointer references to the image data.
+ */
 typedef struct esp_jpeg {
 	uint8_t 			*workspace;
-	char 			*file_path;
+	char 				*file_path;
 	uint64_t 			file_pos;
 	uint16_t 			width;
 	uint16_t 			height;
 	uint8_t				*buffer;
 } esp_jpeg_t;
 
+/**
+ * @var 	Global variable stores the ESP JPEG module information.
+ */
 static esp_jpeg_t *g_jpegdec;
+
+/**
+ * @brief   Module tag that is displayed in ESP_LOG.
+ */
 static const char *TAG = "ESP_JPEG";
 
+/**
+ * @func    _jd_input
+ */
 static uint16_t _jd_input(JDEC *jdec, uint8_t *buf, uint16_t len)
 {
 	FILE *fp = NULL;
@@ -60,6 +116,9 @@ static uint16_t _jd_input(JDEC *jdec, uint8_t *buf, uint16_t len)
 	return len;
 }
 
+/**
+ * @func    _jd_output
+ */
 static uint16_t _jd_output(JDEC *jdec, void *bitmap, JRECT *rect)
 {
 	uint8_t *in = (uint8_t *)bitmap;
@@ -77,6 +136,9 @@ static uint16_t _jd_output(JDEC *jdec, void *bitmap, JRECT *rect)
 	return 1;
 }
 
+/**
+ * @func    esp_jpeg_init
+ */
 esp_jpeg_handle_t esp_jpeg_init(uint8_t *buffer)
 {
 	ESPJPEG_CHECK(buffer, "error buffer null", return NULL);
@@ -92,6 +154,9 @@ esp_jpeg_handle_t esp_jpeg_init(uint8_t *buffer)
 	return g_jpegdec;
 }
 
+/**
+ * @func    esp_jpeg_set_file
+ */
 esp_err_t esp_jpeg_set_file(esp_jpeg_handle_t handle, const char *file_path)
 {
 	ESPJPEG_CHECK(handle, "error handle null", return ESP_ERR_INVALID_ARG);
